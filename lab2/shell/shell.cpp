@@ -17,6 +17,7 @@
 #include <stdbool.h>
 #include <setjmp.h>
 #include <fstream>
+#include <pwd.h>
 
 int pipe_fd[2];
 
@@ -260,6 +261,17 @@ int main() {
   }
   jmp_set = 1;
   int index = 0;
+  struct passwd *pw = getpwuid(getuid());
+  std::string homedir = pw->pw_dir;
+  std::string a = homedir + "/.shell_history";
+  std::ifstream afile;
+  afile.open(a,std::ios::in);
+  std::string data;
+
+  while (getline(afile,data)) {
+    history.push_back(data);
+  }
+  afile.close();
 
   while (true) {
     std::cout <<"#";
@@ -271,6 +283,12 @@ int main() {
     std::vector<std::string> args = split(cmd, " ");
     if (args[0] == "exit") {
       if (args.size() <= 1) {
+        std::ofstream ofile;
+        ofile.open(a,std::ios::out);
+        for (int i = 0;i < history.size();i ++){
+          ofile << history[i] << "\n";
+        }
+        ofile.close();
         return 0;
       }
 
