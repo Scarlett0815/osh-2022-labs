@@ -241,6 +241,14 @@ static void ctrlc_handler(int signal) {
 
 static int cnt = 0;
 
+int check_for_EOF() {
+    if (feof(stdin)) return 1;
+    char c = std::cin.get();
+    if (int(c) == EOF) return 1;
+    std::cin.putback(c);
+    return 0;
+}
+
 int main() {
   // 不同步 iostream 和 cstdio 的 buffer
   std::ios::sync_with_stdio(false);
@@ -277,6 +285,8 @@ int main() {
     std::cout <<"#";
     // 读入一行。std::getline 结果不包含换行符。
     //fs.open(".shell_history",std::fstream::in|std::fstream::out|std::fstream::app);
+    if (check_for_EOF())
+      return 0;
     std::getline(std::cin, cmd);
     // 按空格分割命令为单词
     history.push_back(cmd);
