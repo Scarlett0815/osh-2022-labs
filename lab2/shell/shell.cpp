@@ -285,8 +285,15 @@ int main() {
     std::cout <<"#";
     // 读入一行。std::getline 结果不包含换行符。
     //fs.open(".shell_history",std::fstream::in|std::fstream::out|std::fstream::app);
-    if (check_for_EOF())
+    if (check_for_EOF()){
+      std::ofstream ofile;
+      ofile.open(a,std::ios::out);
+      for (int i = 0;i < history.size();i ++){
+        ofile << history[i] << "\n";
+      }
+      ofile.close();
       return 0;
+    }
     std::getline(std::cin, cmd);
     // 按空格分割命令为单词
     history.push_back(cmd);
