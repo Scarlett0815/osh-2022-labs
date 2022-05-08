@@ -31,15 +31,9 @@ using namespace std;
 
 char bufstr[4096];
 
-#ifdef __x86_64__
 #define REG_ACC  RAX
 #define REG_ARG1 RDI
 #define REG_ARG2 RSI
-#else
-#define REG_ACC  EAX
-#define REG_ARG1 EBX
-#define REG_ARG2 ECX
-#endif
 
 /* Trace control structure per PID that we're tracking
  */
@@ -140,21 +134,6 @@ int main(int argc, char *argv[])
                 break;
             } else {
 
-                /* fprintf(stderr, "%d: Status is: ", pid); */
-
-                /*
-                if (WIFEXITED(status)) {
-                    fprintf(stderr, "exited");
-                } else if (WIFSIGNALED(status)) {
-                    fprintf(stderr, "exited");
-                } else if (WIFSTOPPED(status), "stopped") {
-                    fprintf(stderr, "stopped");
-                } else if (WIFCONTINUED(status)) {
-                    fprintf(stderr, "continued");
-                }
-                fprintf(stderr, "\n");
-                */
-
                 if (WIFEXITED(status) || WIFSIGNALED(status)) {
                     /* Probably empty the table here */
                     pidTable.erase(pid);
@@ -191,11 +170,8 @@ int main(int argc, char *argv[])
 
                     } 
 
-                    #ifdef __x86_64__
                     ptr1 = regs.rsi;
-                    #else
-                    ptr1 = regs.ecx;
-                    #endif /* __x86_64__ */
+
 
 
                     for (; ptr1; ptr1 += sizeof(unsigned long)) {
@@ -241,11 +217,6 @@ int main(int argc, char *argv[])
 
                     ptrace(PTRACE_GETREGS, pid, 0, &regs);
 
-                    #ifdef __x86_64__
-                    //fprintf(stderr, "%d: Leaving fork/clone: rax = %ld\n", pid, regs.rax);
-                    #else
-                    fprintf(stderr, "%d: Leaving fork/clone: eax = %ld\n", pid, regs.eax);
-                    #endif
 
                     pidTable[pid].entering() = 1;
 
