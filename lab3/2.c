@@ -34,7 +34,7 @@ void *handle_chat(void *data) {
                         str[8 + j - tmp_stop] = buffer[j];
                     }
                     for (int k = 0;k < 31;k ++){
-                        send(pipe1->fd_recv[k], str,i - tmp_stop + 9, 0);
+                        send(fd_total[pipe1->fd_recv[k]], str,i - tmp_stop + 9, 0);
                     }
                 }
                 else {
@@ -43,7 +43,7 @@ void *handle_chat(void *data) {
                         str[j - tmp_stop] = buffer[j];
                     }
                     for (int k = 0;k < 31;k ++){
-                        send(pipe1->fd_recv[k], str,i - tmp_stop + 1, 0);
+                        send(fd_total[pipe1->fd_recv[k]], str,i - tmp_stop + 1, 0);
                     }
                 }
                 tmp_stop = i + 1;  
@@ -59,7 +59,7 @@ void *handle_chat(void *data) {
             if (index >= 500){
                 if (send_flag){
                     for (int k = 0;k < 31;k ++){
-                        send(pipe1->fd_recv[k], buffer,index, 0);
+                        send(fd_total[pipe1->fd_recv[k]], buffer,index, 0);
                     }
                 }
                 else {
@@ -68,7 +68,7 @@ void *handle_chat(void *data) {
                         str[8 + j] = buffer[j];
                     }
                     for (int k = 0;k < 31;k ++){
-                        send(pipe1->fd_recv[k], str,index + 8, 0);
+                        send(fd_total[pipe1->fd_recv[k]], str,index + 8, 0);
                     }
                     send_flag = 1;
                 }
@@ -99,7 +99,23 @@ int main(int argc, char **argv) {
         perror("listen");
         return 1;
     }
-
+    for (int k = 0;k <= 31;k ++){
+        int j = 0;
+        int index = 0;
+        while (j <= 31){
+            if (index == k){
+                pipe2[k].fd_recv[j] = index + 1;
+                index = index + 2;
+            }
+            else{
+                pipe2[k].fd_recv[j] = index;
+                index = index + 1;
+            }
+            j ++;
+        }
+    }
+    pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+    pthread_cond_t cv = PTHREAD_COND_INITIALIZER;
     int i = 0;
     while (i < 16){
         fd_total[i] = accept(fd,NULL,NULL);
@@ -108,22 +124,10 @@ int main(int argc, char **argv) {
             return 1;
         }
         pipe2[i].fd_send = fd_total[i];
-        for (int k = 0;k <= i;k ++){
-            int j = 0;
-            int index = 0;
-            while (j <= 31){
-                if (index == k){
-                    pipe2[k].fd_recv[j] = fd_total[index + 1];
-                    index = index + 2;
-                }
-                else{
-                    pipe2[i].fd_recv[j] = fd_total[index];
-                    index = index + 1;
-                }
-                j ++;
-            }
-        }
+        pthread_mutex_lock(&mutex);
         pthread_create(&thread[i],NULL,handle_chat,(void *)&pipe2[i]);
+        pthread_cond_signal(&cv);
+        pthread_mutex_unlock(&mutex);
         i ++;
     }
     return 0;
