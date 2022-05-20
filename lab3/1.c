@@ -21,7 +21,7 @@ void *handle_chat(void *data) {
     int count = 0;
     while ((len = recv(pipe->fd_send, buffer + index, 1000, 0)) > 0){
 // send(pipe->fd_recv, buffer, len + 8, 0);
-        printf("%d\n",count++);
+        //printf("%d\n",count++);
         int tmp_stop = 0;
         for (int i = 0;i < len;i ++){
             if (buffer[i] == '\n'){
