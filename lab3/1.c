@@ -11,38 +11,37 @@ struct Pipe {
     int fd_recv;
 };
 
-
-/*void split_buffer(struct Pipe *pipe,char * buffer,int len){
-    char str[1048576] = "Message:";
-    for (int i = 0;i < len;i ++){
-        if (buffer[i] == '\n'){
-            send(pipe->fd_recv, buffer, i + 1, 0);
-        }
-        for (int j = 0;j <= i;j ++){
-            str[8 + j] = buffer[j];
-        }
-        split_buffer(pipe,buffer + i,len - i);
-    }
-    return;
-}*/
-
 void *handle_chat(void *data) {
     struct Pipe *pipe = (struct Pipe *)data;
-    char buffer[1048576];
-    char tmp[1048576];
+    char buffer[2000];
+    char tmp[1000];
     ssize_t len;
     int index = 0;
-    while ((len = recv(pipe->fd_send, buffer + index, 1048576, 0)) > 0){
+    int send_flag = 0;
+    int count = 0;
+    while ((len = recv(pipe->fd_send, buffer + index, 1000, 0)) > 0){
 // send(pipe->fd_recv, buffer, len + 8, 0);
+        printf("%d\n",count++);
         int tmp_stop = 0;
         for (int i = 0;i < len;i ++){
             if (buffer[i] == '\n'){
-                char str[1048576] = "Message:";
-                for (int j = tmp_stop;j <= i;j ++){
-                    str[8 + j - tmp_stop] = buffer[j];
+                if (send_flag == 0){
+                    char str[1024] = "Message:";
+                    for (int j = tmp_stop;j <= i;j ++){
+                        str[8 + j - tmp_stop] = buffer[j];
+                    }
+                    send(pipe->fd_recv, str,i - tmp_stop + 9, 0);
                 }
-                send(pipe->fd_recv, str,i - tmp_stop + 9, 0);
-                tmp_stop = i + 1;            }
+                else {
+                    char str[1024];
+                    for (int j = tmp_stop;j <= i;j ++){
+                        str[j - tmp_stop] = buffer[j];
+                    }
+                    send(pipe->fd_recv, str,i - tmp_stop + 1, 0);
+                }
+                tmp_stop = i + 1;  
+                send_flag = 0;        
+            }
         }
         if (buffer[len - 1] == '\n') index = 0;
         else {
@@ -50,6 +49,20 @@ void *handle_chat(void *data) {
                 buffer[i - tmp_stop] = buffer[i];
             }
             index = len - tmp_stop;
+            if (index >= 500){
+                if (send_flag){
+                    send(pipe->fd_recv,buffer,index,0);
+                }
+                else {
+                    char str[1024] = "Message:";
+                    for (int j = 0;j < index;j ++){
+                        str[8 + j] = buffer[j];
+                    }
+                    send(pipe->fd_recv, str,index + 8, 0);
+                    send_flag = 1;
+                }
+                index = 0;
+            }
         }
     }
     return NULL;
