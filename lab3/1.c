@@ -11,16 +11,45 @@ struct Pipe {
     int fd_recv;
 };
 
+
+/*void split_buffer(struct Pipe *pipe,char * buffer,int len){
+    char str[1048576] = "Message:";
+    for (int i = 0;i < len;i ++){
+        if (buffer[i] == '\n'){
+            send(pipe->fd_recv, buffer, i + 1, 0);
+        }
+        for (int j = 0;j <= i;j ++){
+            str[8 + j] = buffer[j];
+        }
+        split_buffer(pipe,buffer + i,len - i);
+    }
+    return;
+}*/
+
 void *handle_chat(void *data) {
     struct Pipe *pipe = (struct Pipe *)data;
-    char buffer[1048576] = "Message:";
+    char buffer[1048576];
+    char tmp[1048576];
     ssize_t len;
-    int index = 8;
-    while ((len = recv(pipe->fd_send, buffer + index, 1048576, 0)) > 0) {
-        if (len >= 1 && buffer[index] != '\n') index = index + len;
+    int index = 0;
+    while ((len = recv(pipe->fd_send, buffer + index, 1048576, 0)) > 0){
+// send(pipe->fd_recv, buffer, len + 8, 0);
+        int tmp_stop = 0;
+        for (int i = 0;i < len;i ++){
+            if (buffer[i] == '\n'){
+                char str[1048576] = "Message:";
+                for (int j = tmp_stop;j <= i;j ++){
+                    str[8 + j - tmp_stop] = buffer[j];
+                }
+                send(pipe->fd_recv, str,i - tmp_stop + 9, 0);
+                tmp_stop = i + 1;            }
+        }
+        if (buffer[len - 1] == '\n') index = 0;
         else {
-            send(pipe->fd_recv, buffer, index, 0);
-            index = 8;
+            for (int i = tmp_stop;i < len;i ++){
+                buffer[i - tmp_stop] = buffer[i];
+            }
+            index = len - tmp_stop;
         }
     }
     return NULL;
