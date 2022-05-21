@@ -49,7 +49,7 @@ void *handle_chat(void *data) {
                 buffer[i - tmp_stop] = buffer[i];
             }
             index = len - tmp_stop;
-            if (index >= 500){
+            
                 if (send_flag){
                     send(pipe->fd_recv,buffer,index,0);
                 }
@@ -62,7 +62,7 @@ void *handle_chat(void *data) {
                     send_flag = 1;
                 }
                 index = 0;
-            }
+            
         }
     }
     return NULL;
