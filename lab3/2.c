@@ -117,7 +117,7 @@ int main(int argc, char **argv) {
     pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
     pthread_cond_t cv = PTHREAD_COND_INITIALIZER;
     int i = 0;
-    while (i < 16){
+    while (i < 32){
         fd_total[i] = accept(fd,NULL,NULL);
         if (fd_total[i] == -1){
             perror("accept");
