@@ -89,8 +89,8 @@ int main(int argc, char **argv) {
             for (int j = 0;j < index;j ++){
                 if (FD_ISSET(fd_total[j], &clients)) {
                     int len = 0;
-                    while (1){
-                    len = recv(fd_total[j], buffer[j] + index1[j], 1000, 0);
+                    while ((len = recv(fd_total[j], buffer[j] + index1[j], 1000, 0))){
+                    
                     int tmp_stop = 0;
                     for (int i = 0;i < len;i ++){
                         if (buffer[j][i] == '\n'){
@@ -147,6 +147,14 @@ int main(int argc, char **argv) {
                         index1[j] = 0;
                     
                     }
+                    }
+                    if (len <= 0){
+                        if (j != index - 1){
+                            for (int v = j;v < index -1;v ++){
+                                fd_total[v] = fd_total[v + 1];
+                            }
+                        }
+                        index --;
                     }
                 }
             }
