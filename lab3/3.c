@@ -8,7 +8,8 @@
 #include <sys/time.h>
 #include <netinet/in.h>
 #include <sys/epoll.h>
-int fd_total[32];
+ 
+
 
 int main(int argc, char **argv) {
     char buffer[32][1024];
@@ -37,7 +38,7 @@ int main(int argc, char **argv) {
         perror("listen");
         return 1;
     }
-    fd_set clients;
+    int clients[32];
     struct epoll_event ev, events[32];
     int epollfd,nfds;
     epollfd = epoll_create1(0);
@@ -56,109 +57,126 @@ int main(int argc, char **argv) {
     while(1){
         //printf ("%d**\n",send_flag[1]);
         nfds = epoll_wait(epollfd, events, 32, -1);
+        //printf ("%d**\n",nfds);
         if (nfds == -1) {
             perror("epoll_wait");
             exit(EXIT_FAILURE);
         }
-        for (int n = 0; n < nfds; ++n) {
-            if (events[n].data.fd == fd) {
-                fd_total[index] = accept(fd,NULL,NULL);
-                if (fd_total[index] == -1) {
+        for (int j = 0; j < nfds; ++j) {
+            if (events[j].data.fd == fd) {
+                int fd_total = accept(fd,NULL,NULL);
+                if (fd_total == -1) {
                     perror("accept");
                     return 1;
                 }
-                fcntl(fd_total[index], F_SETFL, fcntl(fd_total[index], F_GETFL, 0) | O_NONBLOCK);
+                fcntl(fd_total, F_SETFL, fcntl(fd_total, F_GETFL, 0) | O_NONBLOCK);
                 ev.events = EPOLLIN | EPOLLET;
-                ev.data.fd = fd_total[index];
-                if (epoll_ctl(epollfd, EPOLL_CTL_ADD, fd_total[index],
+                ev.data.fd = fd_total;
+                if (epoll_ctl(epollfd, EPOLL_CTL_ADD, fd_total,
                             &ev) == -1) {
                     perror("epoll_ctl: conn_sock");
                     exit(EXIT_FAILURE);
                 }
-                FD_SET(fd_total[index], &clients);
+                clients[index] = fd_total;
                 index ++;
-
+                //setnonblocking(fd_total);
+                //printf("1");
             }
-        }
-        FD_ZERO(&clients);
+        
+        /*FD_ZERO(&clients);
         FD_SET(fd, &clients);
         for (int k = 0;k < index;k ++){
             FD_SET(fd_total[k], &clients);
-        }
-        if (select(fd_total[index- 1] + 1, &clients, NULL, NULL, NULL) > 0) { // 找出可以读的套接字
-            for (int j = 0;j < index;j ++){
-                if (FD_ISSET(fd_total[j], &clients)) {
-                    int len = 0;
-                    while ((len = recv(fd_total[j], buffer[j] + index1[j], 1000, 0))){
-                    
+        }*/
+        // 找出可以读的套接字
+            else if (events[j].events & EPOLLIN) {
+                //printf ("0");
+                int len = 0;
+                while ((len = recv(events[j].data.fd, buffer[j] + index1[j], 1000, 0))){
+                
                     int tmp_stop = 0;
                     for (int i = 0;i < len;i ++){
                         if (buffer[j][i] == '\n'){
                             if (send_flag[j] == 0){
                                 char str[1024] = "Message:";
-                                for (int w = tmp_stop;w <= i;w ++){
-                                    str[8 + w - tmp_stop] = buffer[j][w];
-                                }
-                                for (int k = 0;k < index;k ++){
-                                    if (k != j)
-                                        send(fd_total[k], str,i - tmp_stop + 9, 0);
+                            for (int w = tmp_stop;w <= i;w ++){
+                                str[8 + w - tmp_stop] = buffer[j][w];
+                            }
+                            for (int k = 0;k < index;k ++) {
+                                if (clients[k] != events[j].data.fd) {
+                                    send(clients[k], str, i - tmp_stop + 9, 0);
                                 }
                             }
-                            else {
-                                char str[1024];
-                                for (int w = tmp_stop;w <= i;w ++){
-                                    str[w - tmp_stop] = buffer[j][w];
-                                }
-                                for (int k = 0;k < index;k ++){
-                                    if (k != j)
-                                        send(fd_total[k], str,i - tmp_stop + 1, 0);
-                                }
-                            }
-                            tmp_stop = i + 1;  
-                            send_flag[j] = 0;        
-                        }
-                    }
-                    
-                    if (buffer[j][len - 1] == '\n') {index1[j] = 0;break;}
-                    else {
-                        //printf ("%d\n",send_flag[j]);
-                        for (int i = tmp_stop;i < len;i ++){
-                            buffer[j][i - tmp_stop] = buffer[j][i];
-                        }
-                        index1[j] = len - tmp_stop;
-                        if (send_flag[j]){
-                            for (int k = 0;k < index;k ++){
-                                if (k != j)
-                                    send(fd_total[k], buffer[j],index1[j], 0);
-                            }
-                            //printf ("%d\n",send_flag[j]);
                         }
                         else {
-                            char str[1024] = "Message:";
-                            for (int w = 0;w < index1[j];w ++){
-                                str[8 + w] = buffer[j][w];
+                            char str[1024];
+                            for (int w = tmp_stop;w <= i;w ++){
+                                str[w - tmp_stop] = buffer[j][w];
                             }
-                            for (int k = 0;k < index;k ++){
-                                if (k != j)
-                                    send(fd_total[k], str,index1[j] + 8, 0);
-                            }
-                            send_flag[j] = 1;
-                        }
-                        index1[j] = 0;
-                    
-                    }
-                    }
-                    if (len <= 0){
-                        if (j != index - 1){
-                            for (int v = j;v < index -1;v ++){
-                                fd_total[v] = fd_total[v + 1];
+
+                            for (int k = 0;k < index;k ++) {
+                                if (clients[k] != events[j].data.fd) {
+                                    send(clients[k], str, i - tmp_stop + 1, 0);
+                                }
                             }
                         }
-                        index --;
+                        tmp_stop = i + 1;  
+                        send_flag[j] = 0;        
                     }
                 }
+                
+                if (buffer[j][len - 1] == '\n') {index1[j] = 0;break;}
+                else {
+                    //printf ("%d\n",send_flag[j]);
+                    for (int i = tmp_stop;i < len;i ++){
+                        buffer[j][i - tmp_stop] = buffer[j][i];
+                    }
+                    index1[j] = len - tmp_stop;
+                    if (send_flag[j]){
+                        for (int k = 0;k < index;k ++) {
+                            if (clients[k] != events[j].data.fd) {
+                                send(clients[k],buffer[j], index1[j], 0);
+                            }
+                        }
+                        //printf ("%d\n",send_flag[j]);
+                    }
+                    else {
+                        char str[1024] = "Message:";
+                        for (int w = 0;w < index1[j];w ++){
+                            str[8 + w] = buffer[j][w];
+                        }
+
+                        for (int k = 0;k < index; k++) {
+                            if (clients[k] != events[j].data.fd) {
+                                send(clients[k],str, index1[j] + 8, 0);
+                            }
+                        }
+                        send_flag[j] = 1;
+                    }
+                    index1[j] = 0;
+                
+                }
+                }
+                if (len <= 0){
+                        int v = 0;
+                        while (v < index){
+                            if (clients[v] == events[j].data.fd){
+                                for (int w = v;w < index - 1;w ++){
+                                    clients[w] = clients[w + 1];
+                                }
+                                break;
+                            }
+                            v ++;
+                        }
+                        //printf("!");
+                        //close(events[j].data.fd);
+                        index --;
+                        index1[j] = 0;
+                        send_flag[j] = 0;
+                        memset(buffer[j],0,sizeof(buffer[j]));
+                    }
             }
-        } 
+        }
 
     }
     return 0;
