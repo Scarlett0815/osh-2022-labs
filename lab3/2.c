@@ -13,6 +13,8 @@ struct Pipe {
 
 int thread_index = 0;
 struct Pipe *head;
+    pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+    pthread_cond_t cv = PTHREAD_COND_INITIALIZER;
 
 void *handle_chat(void *data) {
     struct Pipe *pipe1 = (struct Pipe *)data;
@@ -39,7 +41,10 @@ void *handle_chat(void *data) {
                     }
                     struct Pipe *q = pipe1 -> next;
                     while (q != pipe1){
+                        pthread_mutex_lock(&mutex);
                         send(q -> fd, str,i - tmp_stop + 9, 0);
+                        pthread_cond_signal(&cv);
+                        pthread_mutex_unlock(&mutex);
                         q = q -> next;
                     }
                 }
@@ -50,7 +55,10 @@ void *handle_chat(void *data) {
                     }
                     struct Pipe *q = pipe1 -> next;
                     while (q != pipe1){
+                        pthread_mutex_lock(&mutex);
                         send(q -> fd, str,i - tmp_stop + 1, 0);
+                        pthread_cond_signal(&cv);
+                        pthread_mutex_unlock(&mutex);
                         q = q -> next;
                     }
                 }
@@ -69,7 +77,10 @@ void *handle_chat(void *data) {
                 if (send_flag){
                     struct Pipe *q = pipe1 -> next;
                     while (q != pipe1){
+                        pthread_mutex_lock(&mutex);
                         send(q -> fd, buffer,index, 0);
+                        pthread_cond_signal(&cv);
+                        pthread_mutex_unlock(&mutex);
                         q = q -> next;
                     }
                 }
@@ -80,7 +91,10 @@ void *handle_chat(void *data) {
                     }
                     struct Pipe *q = pipe1 -> next;
                     while (q != pipe1){
+                        pthread_mutex_lock(&mutex);
                         send(q->fd, str,index + 8, 0);
+                        pthread_cond_signal(&cv);
+                        pthread_mutex_unlock(&mutex);
                         q = q -> next;
                     }
                     send_flag = 1;
@@ -123,8 +137,7 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-    pthread_cond_t cv = PTHREAD_COND_INITIALIZER;
+
 
     pthread_t thread[32];
     head = malloc(sizeof(struct Pipe));
@@ -135,10 +148,9 @@ int main(int argc, char **argv) {
         return 1;
     }
     head ->fd = fd_new;
-    pthread_mutex_lock(&mutex);
+    
     pthread_create(&thread[thread_index],NULL,handle_chat,(void *)head);
-    pthread_cond_signal(&cv);
-    pthread_mutex_unlock(&mutex);
+    
 
     thread_index ++;
     head -> next = head;
@@ -151,10 +163,8 @@ int main(int argc, char **argv) {
             return 1;
         }
         pipe -> fd = fd_new; 
-        pthread_mutex_lock(&mutex);
+        
         pthread_create(&thread[thread_index],NULL,handle_chat,(void *)pipe);
-        pthread_cond_signal(&cv);
-        pthread_mutex_unlock(&mutex);
         pipe -> next = head -> next;
         head -> next = pipe;
         head = pipe;  
