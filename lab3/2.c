@@ -93,7 +93,7 @@ void *handle_chat(void *data) {
         struct Str_news *str = malloc(sizeof(struct Str_news));
         struct Pipe *q = pipe1 -> next;
         strcat(str->str_small,buffer);
-        printf ("%s",buffer);
+        //printf ("%s",buffer);
         pthread_mutex_lock(&mutex);
         while (q != pipe1){
             struct Str_news *tail_search = q -> str_wait;
